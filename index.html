@@ -1,0 +1,548 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Roll Call Test</title>
+<meta name="theme-color" content="#0f2940">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="PT Test">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<style>
+/* Layout: one column on a phone; roll call beside the status panel on an iPad.
+   Palette comes from the club seal: navy, gold, cream, crimson. System fonts only, so it works offline. */
+:root {
+  --bg: #f3ead3;
+  --surface: #fbf6e6;
+  --fg: #10263d;
+  --muted: #4d5b6a;
+  --line: #d9c9a0;
+  --btn: #8c1f2f;
+  --btn-fg: #ffffff;
+  --gold: #d5a040;
+  --good: #1e6b3a;
+  --bad: #a1262f;
+  --toast-bg: #10263d;
+  --toast-fg: #f4e6bd;
+  --display: "Rockwell", "Rockwell Nova", "American Typewriter", Georgia, serif;
+  --body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0b1f33;
+    --surface: #112b45;
+    --fg: #f4e6bd;
+    --muted: #a9b6c4;
+    --line: #25445f;
+    --btn: #d5a040;
+    --btn-fg: #0b1f33;
+    --good: #6fcf97;
+    --bad: #ff8a8a;
+    --toast-bg: #f4e6bd;
+    --toast-fg: #0b1f33;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 16px/1.45 var(--body);
+  padding-block: max(16px, env(safe-area-inset-top, 0px)) max(96px, calc(env(safe-area-inset-bottom, 0px) + 80px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 980px; margin: 0 auto; display: grid; gap: 16px; }
+header { display: flex; align-items: center; gap: 14px; }
+header img { width: 64px; height: 64px; border-radius: 14px; flex: none; }
+h1 { font: 700 1.9rem/1.1 var(--display); margin: 0; text-wrap: balance; }
+.sub { margin: 2px 0 0; color: var(--muted); }
+.grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: grid; gap: 14px; min-width: 0; align-content: start; }
+h2 { margin: 0; font-size: .8rem; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+h3 { margin: 0; font-size: .95rem; }
+.name { margin: 0; font-size: 1.1rem; font-weight: 600; }
+.big { margin: 0; display: flex; align-items: baseline; gap: 10px; }
+#credits { font: 700 4.5rem/1 var(--display); font-variant-numeric: tabular-nums; }
+.unit { color: var(--muted); font-size: 1.05rem; }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; text-align: center;
+  min-height: 56px; padding: 0 18px; border-radius: 12px; border: 2px solid var(--btn);
+  background: var(--btn); color: var(--btn-fg); font: 600 1.05rem var(--body); cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn.alt { background: transparent; color: var(--fg); border-color: var(--fg); }
+.btn.danger { background: transparent; color: var(--bad); border-color: var(--bad); }
+.btn:disabled { opacity: .45; cursor: default; }
+.btn:focus-visible, summary:focus-visible, textarea:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+.row-btns { display: grid; grid-template-columns: 2fr 1fr; gap: 10px; }
+.btns { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); }
+.hint { margin: 0; color: var(--muted); font-size: .92rem; min-height: 1.2em; }
+.ledger { list-style: none; margin: 0; padding: 0; display: grid; }
+.ledger li { display: grid; grid-template-columns: 1fr auto auto; gap: 4px 12px; padding: 8px 0; border-top: 1px solid var(--line); font-size: .95rem; }
+.ledger .when { color: var(--muted); grid-column: 1 / -1; font-size: .82rem; }
+.ledger .d, .ledger .b { font-family: var(--mono); font-variant-numeric: tabular-nums; text-align: right; }
+.ledger .b { min-width: 3ch; font-weight: 700; }
+.status { margin: 0; display: grid; }
+.st { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+.st dt { color: var(--muted); }
+.st dd { margin: 0; text-align: right; font-weight: 600; }
+.st[data-s="ok"] dd { color: var(--good); }
+.st[data-s="no"] dd { color: var(--bad); }
+.st .h { grid-column: 1 / -1; font-size: .85rem; color: var(--muted); }
+.confirm { border: 2px solid var(--gold); border-radius: 12px; padding: 14px; display: grid; gap: 12px; }
+.confirm p { margin: 0; }
+details { border-top: 1px solid var(--line); padding-top: 12px; }
+summary { cursor: pointer; font-weight: 600; min-height: 32px; }
+textarea { width: 100%; margin: 8px 0; padding: 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); font: .85rem var(--mono); }
+.steps { margin: 0; padding-left: 1.3rem; display: grid; gap: 8px; }
+.sr { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; }
+footer { color: var(--muted); font-size: .85rem; }
+.toast {
+  position: fixed; left: max(12px, env(safe-area-inset-left, 0px)); right: max(12px, env(safe-area-inset-right, 0px));
+  bottom: max(12px, env(safe-area-inset-bottom, 0px)); margin: 0 auto; max-width: 560px;
+  background: var(--toast-bg); color: var(--toast-fg); padding: 14px 16px; border-radius: 12px; z-index: 20;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, .3);
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <img src="icon-192.png" width="64" height="64" alt="Portland Takedown seal">
+    <div>
+      <h1>Roll call test</h1>
+      <p class="sub">Spike only. Test data, no real students.</p>
+    </div>
+  </header>
+
+  <div class="grid">
+    <section class="card" aria-labelledby="h-roll">
+      <h2 id="h-roll">Roll call</h2>
+      <p class="name">Test Student</p>
+      <p class="big"><span id="credits">0</span><span class="unit">credits left</span></p>
+      <div class="row-btns">
+        <button class="btn" id="present" type="button">Mark present</button>
+        <button class="btn alt" id="undo" type="button">Undo</button>
+      </div>
+      <button class="btn alt" id="pack" type="button">Add a 10-pack</button>
+      <p class="hint" id="roll-hint"></p>
+      <h3>Ledger, newest first</h3>
+      <ol class="ledger" id="ledger"></ol>
+    </section>
+
+    <section class="card" aria-labelledby="h-status">
+      <h2 id="h-status">What this iPad is doing</h2>
+      <dl class="status" id="status"></dl>
+      <button class="btn alt" id="persist" type="button">Ask the iPad to keep my data</button>
+    </section>
+  </div>
+
+  <section class="card" aria-labelledby="h-backup">
+    <h2 id="h-backup">Backup and restore</h2>
+    <div class="btns">
+      <button class="btn" id="save" type="button">Save backup file</button>
+      <button class="btn alt" id="copy" type="button">Copy backup as text</button>
+      <label class="btn alt" for="file">Restore from file</label>
+      <input class="sr" id="file" type="file" accept=".json,application/json">
+    </div>
+    <div class="confirm" id="restore-confirm" hidden>
+      <p id="restore-text"></p>
+      <div class="btns">
+        <button class="btn" id="restore-yes" type="button">Replace what is on this iPad</button>
+        <button class="btn alt" id="restore-no" type="button">Cancel</button>
+      </div>
+    </div>
+    <details id="paste-box">
+      <summary>Restore from pasted text</summary>
+      <label for="paste">Paste the backup text here</label>
+      <textarea id="paste" rows="5" spellcheck="false" autocapitalize="off" autocorrect="off"></textarea>
+      <button class="btn alt" id="paste-go" type="button">Check pasted text</button>
+    </details>
+    <button class="btn danger" id="erase" type="button">Erase test data</button>
+  </section>
+
+  <section class="card" aria-labelledby="h-steps">
+    <h2 id="h-steps">The test, step by step</h2>
+    <ol class="steps">
+      <li>With the iPad online, open this page in Safari. Wait until Offline files says Ready.</li>
+      <li>Tap Share, then Add to Home Screen. Open the app from its new icon. Do the rest of the test inside that icon, because Safari and the home-screen app keep separate data.</li>
+      <li>Tap Mark present twice, then Undo once. Credits should read 9.</li>
+      <li>Tap Save backup file and choose Google Drive or Save to Files.</li>
+      <li>Turn on airplane mode. Close the app fully, then open it from the icon. Connection should say Offline and credits should still read 9.</li>
+      <li>Tap Erase test data, then Restore from file and pick your backup. Credits should read 9 again.</li>
+      <li>Leave the iPad alone for a week, then open the app again. Opens should have gone up and credits should still read 9.</li>
+    </ol>
+  </section>
+
+  <footer>Build v1. Nothing in this test is a real student record.</footer>
+</div>
+
+<p class="toast" id="toast" role="status" hidden></p>
+
+<script>
+(() => {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  const EXPECTED_FILES = 6;
+  const state = { first: null, prev: null, opens: 0, pending: null, swError: '', dbError: '' };
+  let db = null;
+
+  const fmt = (ms) => new Date(ms).toLocaleString('en-AU', {
+    weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit'
+  });
+  const bytes = (n) => {
+    if (n < 1024) return n + ' B';
+    if (n < 1048576) return (n / 1024).toFixed(0) + ' KB';
+    if (n < 1073741824) return (n / 1048576).toFixed(1) + ' MB';
+    return (n / 1073741824).toFixed(1) + ' GB';
+  };
+
+  let toastTimer;
+  function msg(text) {
+    const t = $('toast');
+    t.textContent = text;
+    t.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { t.hidden = true; }, 9000);
+  }
+
+  /* ---------- storage: an append-only ledger in IndexedDB ---------- */
+  function openDB() {
+    return new Promise((resolve, reject) => {
+      if (!('indexedDB' in window)) { reject(new Error('IndexedDB is not available')); return; }
+      const req = indexedDB.open('pt-spike', 1);
+      req.onupgradeneeded = () => {
+        req.result.createObjectStore('ledger', { keyPath: 'id', autoIncrement: true });
+        req.result.createObjectStore('meta', { keyPath: 'k' });
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+      req.onblocked = () => reject(new Error('Database is blocked by another tab'));
+    });
+  }
+  const getAll = (store) => new Promise((res, rej) => {
+    const r = db.transaction(store).objectStore(store).getAll();
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+  const getKey = (store, k) => new Promise((res, rej) => {
+    const r = db.transaction(store).objectStore(store).get(k);
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+  const write = (store, fn) => new Promise((res, rej) => {
+    const t = db.transaction(store, 'readwrite');
+    const out = fn(t.objectStore(store));
+    t.oncomplete = () => res(out && out.result);
+    t.onerror = () => rej(t.error);
+    t.onabort = () => rej(t.error || new Error('Write failed'));
+  });
+  const addEntry = (entry) => write('ledger', (s) => s.add(entry));
+  const putMeta = (items) => write('meta', (s) => { items.forEach((i) => s.put(i)); });
+  const clearLedger = () => write('ledger', (s) => s.clear());
+  const replaceLedger = (items) => write('ledger', (s) => { s.clear(); items.forEach((i) => s.put(i)); });
+
+  /* Read and write happen in ONE transaction, so two fast taps can never spend the
+     last credit twice or undo the same lesson twice. The real app needs the same rule. */
+  function markPresent() {
+    return new Promise((res, rej) => {
+      const t = db.transaction('ledger', 'readwrite');
+      const s = t.objectStore('ledger');
+      let did = false;
+      const r = s.getAll();
+      r.onsuccess = () => {
+        const credits = r.result.reduce((sum, e) => sum + e.delta, 0);
+        if (credits > 0) { s.add({ type: 'present', delta: -1, at: Date.now() }); did = true; }
+      };
+      t.oncomplete = () => res(did);
+      t.onerror = () => rej(t.error);
+      t.onabort = () => rej(t.error || new Error('Write failed'));
+    });
+  }
+  function undoLast() {
+    return new Promise((res, rej) => {
+      const t = db.transaction('ledger', 'readwrite');
+      const s = t.objectStore('ledger');
+      let did = false;
+      const r = s.getAll();
+      r.onsuccess = () => {
+        const all = r.result;
+        const undone = new Set(all.filter((e) => e.type === 'undo').map((e) => e.ref));
+        const target = all.slice().reverse().find((e) => e.type === 'present' && !undone.has(e.id));
+        if (target) { s.add({ type: 'undo', delta: 1, ref: target.id, at: Date.now() }); did = true; }
+      };
+      t.oncomplete = () => res(did);
+      t.onerror = () => rej(t.error);
+      t.onabort = () => rej(t.error || new Error('Write failed'));
+    });
+  }
+
+  /* Button actions run one at a time, in the order they were tapped. */
+  let chain = Promise.resolve();
+  const enqueue = (fn) => {
+    chain = chain.then(fn).catch((e) => msg('Something went wrong: ' + (e && e.message || e)));
+    return chain;
+  };
+
+  /* ---------- roll call ---------- */
+  const LABEL = { pack: 'Pack added', present: 'Present', undo: 'Undo' };
+  function withBalances(entries) {
+    let b = 0;
+    return entries.map((e) => { b += e.delta; return Object.assign({}, e, { bal: b }); });
+  }
+  async function render() {
+    const entries = await getAll('ledger');
+    const rows = withBalances(entries);
+    const credits = rows.length ? rows[rows.length - 1].bal : 0;
+    $('credits').textContent = credits;
+    const undone = new Set(entries.filter((e) => e.type === 'undo').map((e) => e.ref));
+    const target = entries.slice().reverse().find((e) => e.type === 'present' && !undone.has(e.id));
+    $('undo').disabled = !target;
+    $('present').disabled = credits <= 0;
+    $('roll-hint').textContent = credits <= 0
+      ? 'Zero credits. The real app would show what is owed here. Add a pack to keep testing.'
+      : '';
+    const list = $('ledger');
+    list.textContent = '';
+    if (!rows.length) {
+      const li = document.createElement('li');
+      li.textContent = 'No entries yet.';
+      list.appendChild(li);
+    }
+    rows.slice(-8).reverse().forEach((e) => {
+      const li = document.createElement('li');
+      const a = document.createElement('span'); a.textContent = LABEL[e.type] || e.type;
+      const d = document.createElement('span'); d.className = 'd'; d.textContent = (e.delta > 0 ? '+' : '') + e.delta;
+      const b = document.createElement('span'); b.className = 'b'; b.textContent = e.bal;
+      const w = document.createElement('span'); w.className = 'when'; w.textContent = fmt(e.at);
+      li.append(a, d, b, w);
+      list.appendChild(li);
+    });
+  }
+
+  /* ---------- status panel ---------- */
+  const ROWS = [
+    ['conn', 'Connection'], ['mode', 'Opened as'], ['sw', 'Offline files'], ['db', 'Data on this iPad'],
+    ['keep', 'Kept when space is low'], ['space', 'Space used'], ['opens', 'Opens'], ['prev', 'Opened before this one']
+  ];
+  function buildStatus() {
+    const dl = $('status');
+    ROWS.forEach(([key, label]) => {
+      const row = document.createElement('div');
+      row.className = 'st'; row.id = 'st-' + key; row.dataset.s = 'info';
+      const dt = document.createElement('dt'); dt.textContent = label;
+      const dd = document.createElement('dd');
+      const h = document.createElement('span'); h.className = 'h';
+      row.append(dt, dd, h);
+      dl.appendChild(row);
+    });
+  }
+  function setRow(key, text, s, hint) {
+    const row = $('st-' + key);
+    row.dataset.s = s;
+    row.querySelector('dd').textContent = text;
+    row.querySelector('.h').textContent = hint || '';
+    row.querySelector('.h').hidden = !hint;
+  }
+  async function renderStatus() {
+    setRow('conn', navigator.onLine ? 'Online' : 'Offline', 'info', 'As reported by the iPad. Airplane mode should say Offline.');
+    const standalone = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+    setRow('mode', standalone ? 'Home screen app' : 'Safari tab', standalone ? 'ok' : 'info',
+      standalone ? '' : 'Do the real test from the home-screen icon.');
+
+    if (!('serviceWorker' in navigator) || !('caches' in window)) {
+      setRow('sw', 'Not supported', 'no', 'This browser cannot save the app for offline use.');
+    } else {
+      let active = false, cached = 0;
+      try {
+        const reg = await navigator.serviceWorker.getRegistration();
+        active = !!(reg && reg.active);
+        const keys = (await caches.keys()).filter((k) => k.startsWith('pt-spike-'));
+        for (const k of keys) cached = Math.max(cached, (await (await caches.open(k)).keys()).length);
+      } catch (e) { state.swError = String(e && e.message || e); }
+      if (active && cached >= EXPECTED_FILES) setRow('sw', 'Ready (' + cached + ' of ' + EXPECTED_FILES + ' saved)', 'ok');
+      else setRow('sw', 'Not ready (' + cached + ' of ' + EXPECTED_FILES + ' saved)', 'no',
+        state.swError || 'Stay online for a few seconds, then reload this page.');
+    }
+
+    setRow('db', db ? 'Working' : 'Unavailable', db ? 'ok' : 'no', db ? '' : state.dbError);
+
+    let persisted = null, usage = null, quota = null;
+    try {
+      if (navigator.storage && navigator.storage.persisted) persisted = await navigator.storage.persisted();
+      if (navigator.storage && navigator.storage.estimate) {
+        const est = await navigator.storage.estimate(); usage = est.usage; quota = est.quota;
+      }
+    } catch (e) { /* leave as unknown */ }
+    if (persisted === true) setRow('keep', 'Yes', 'ok');
+    else if (persisted === false) setRow('keep', 'Not guaranteed', 'info', 'The iPad may clear this if it sits unused. Keep the weekly backup.');
+    else setRow('keep', 'Cannot tell', 'info', 'This iPad does not say. Keep the weekly backup.');
+    setRow('space', usage == null ? 'Unknown' : bytes(usage) + (quota ? ' of ' + bytes(quota) : ''), 'info');
+
+    setRow('opens', state.opens ? state.opens + ' since ' + fmt(state.first) : 'Unknown', 'info');
+    setRow('prev', state.prev ? fmt(state.prev) : 'First open', 'info');
+  }
+
+  /* ---------- backup and restore ---------- */
+  async function makeBackup() {
+    const ledger = await getAll('ledger');
+    const payload = { app: 'portland-takedown-spike', schema: 1, exportedAt: new Date().toISOString(), ledger };
+    const day = new Date().toLocaleDateString('en-CA');
+    return { json: JSON.stringify(payload, null, 2), name: 'pt-spike-backup-' + day + '.json' };
+  }
+  function download(file) {
+    const url = URL.createObjectURL(file);
+    const a = document.createElement('a');
+    a.href = url; a.download = file.name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+  }
+  function parseBackup(text) {
+    let o;
+    try { o = JSON.parse(text); } catch (e) { throw new Error('That is not a backup. It could not be read.'); }
+    if (!o || o.app !== 'portland-takedown-spike' || !Array.isArray(o.ledger)) throw new Error('That file is not a backup from this test app.');
+    const ok = o.ledger.every((e) => e && Number.isInteger(e.id) && typeof e.type === 'string' && Number.isFinite(e.delta) && Number.isFinite(e.at));
+    if (!ok) throw new Error('The backup has damaged entries, so nothing was restored.');
+    return o;
+  }
+  async function offerRestore(text) {
+    const o = parseBackup(text);
+    const credits = o.ledger.reduce((sum, e) => sum + e.delta, 0);
+    const current = (await getAll('ledger')).length;
+    state.pending = o;
+    $('restore-text').textContent = 'This backup was saved ' + fmt(Date.parse(o.exportedAt)) + '. It holds ' +
+      o.ledger.length + ' entries and ' + credits + ' credits. Restoring replaces the ' + current + ' entries on this iPad.';
+    $('restore-confirm').hidden = false;
+    $('restore-confirm').scrollIntoView({ block: 'center' });
+  }
+
+  function wire() {
+    $('present').onclick = () => enqueue(async () => { await markPresent(); await render(); });
+    $('undo').onclick = () => enqueue(async () => { await undoLast(); await render(); });
+    $('pack').onclick = () => enqueue(async () => { await addEntry({ type: 'pack', delta: 10, at: Date.now() }); await render(); });
+
+    $('persist').onclick = async () => {
+      if (!(navigator.storage && navigator.storage.persist)) { msg('This iPad does not offer that option here. The weekly backup matters more.'); return; }
+      const ok = await navigator.storage.persist();
+      msg(ok ? 'Granted. The iPad has marked this data as keep.' : 'Not granted. Keep the weekly backup.');
+      renderStatus();
+    };
+
+    $('save').onclick = async () => {
+      try {
+        const { json, name } = await makeBackup();
+        const file = new File([json], name, { type: 'application/json' });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({ files: [file], title: name });
+            msg('Share sheet closed. If you chose Google Drive or Files, check that ' + name + ' is there.');
+            return;
+          } catch (e) {
+            if (e && e.name === 'AbortError') { msg('Cancelled. No file was saved.'); return; }
+          }
+        }
+        download(file);
+        msg('Downloaded ' + name + '. Look in Downloads or the Files app.');
+      } catch (e) { msg('Backup failed: ' + (e && e.message || e)); }
+    };
+
+    $('copy').onclick = async () => {
+      const { json } = await makeBackup();
+      try {
+        await navigator.clipboard.writeText(json);
+        msg('Copied. Paste it into a note or an email to yourself as a spare backup.');
+      } catch (e) {
+        $('paste').value = json; $('paste-box').open = true; $('paste').select();
+        msg('Copy did not work here. The text is in the box below: select it and copy.');
+      }
+    };
+
+    $('file').onchange = async (ev) => {
+      const f = ev.target.files && ev.target.files[0];
+      ev.target.value = '';
+      if (!f) return;
+      try { await offerRestore(await f.text()); } catch (e) { msg(e.message); }
+    };
+    $('paste-go').onclick = async () => {
+      try { await offerRestore($('paste').value); } catch (e) { msg(e.message); }
+    };
+    $('restore-no').onclick = () => { state.pending = null; $('restore-confirm').hidden = true; };
+    $('restore-yes').onclick = () => enqueue(async () => {
+      if (!state.pending) return;
+      const n = state.pending.ledger.length;
+      await replaceLedger(state.pending.ledger);
+      state.pending = null; $('restore-confirm').hidden = true;
+      await render();
+      msg('Restored ' + n + ' entries. Credits now read ' + $('credits').textContent + '.');
+    });
+
+    let armed = false, timer;
+    const disarm = () => { armed = false; clearTimeout(timer); $('erase').textContent = 'Erase test data'; };
+    $('erase').onclick = () => {
+      if (!armed) {
+        armed = true; $('erase').textContent = 'Tap again to erase';
+        timer = setTimeout(disarm, 5000);
+        return;
+      }
+      disarm();
+      enqueue(async () => {
+        await clearLedger();
+        await render();
+        msg('Erased. Now restore from your backup to finish the test.');
+      });
+    };
+
+    window.addEventListener('online', renderStatus);
+    window.addEventListener('offline', renderStatus);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) renderStatus(); });
+  }
+
+  async function registerWorker() {
+    if (!('serviceWorker' in navigator)) return;
+    try {
+      await navigator.serviceWorker.register('sw.js', { scope: './' });
+      await navigator.serviceWorker.ready;
+    } catch (e) { state.swError = String(e && e.message || e); }
+    renderStatus();
+  }
+
+  async function boot() {
+    buildStatus();
+    wire();
+    try {
+      db = await openDB();
+      const now = Date.now();
+      let first = await getKey('meta', 'first');
+      if (!first) {
+        await putMeta([{ k: 'first', v: now }]);
+        await addEntry({ type: 'pack', delta: 10, at: now });
+        first = { v: now };
+      }
+      const opens = await getKey('meta', 'opens');
+      const last = await getKey('meta', 'last');
+      state.first = first.v;
+      state.prev = last ? last.v : null;
+      state.opens = (opens ? opens.v : 0) + 1;
+      await putMeta([{ k: 'opens', v: state.opens }, { k: 'last', v: now }]);
+      await render();
+    } catch (e) {
+      state.dbError = String(e && e.message || e);
+      ['present', 'undo', 'pack', 'save', 'copy', 'erase'].forEach((id) => { $(id).disabled = true; });
+      msg('Storage is not working on this browser: ' + state.dbError);
+    }
+    await renderStatus();
+    registerWorker();
+  }
+  boot();
+})();
+</script>
+</body>
+</html>
